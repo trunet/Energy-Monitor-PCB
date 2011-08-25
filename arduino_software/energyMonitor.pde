@@ -207,7 +207,7 @@ int EEPROM_readInt(int ee) {
 
 void recalibrateFromEEPROM() {
     VCAL = EEPROM_readFloat(EEPROM_ADDR_VCAL);
-    ICAL = EEPROM_readFloat(EEPROM_ADDR_VCAL);
+    ICAL = EEPROM_readFloat(EEPROM_ADDR_ICAL);
     PHASECAL = EEPROM_readFloat(EEPROM_ADDR_PHASECAL);
     sendEach = EEPROM_readInt(EEPROM_ADDR_SEND_EACH);
     emon.calibration(VCAL, ICAL, PHASECAL);
