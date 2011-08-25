@@ -7,7 +7,7 @@
 #define ISCONFVALUE 123 // Value to check if calibration is saved on EEPROM
 #define EEPROM_ADDR_VCAL 1
 #define DEFAULT_VCAL 0.270418
-#define EEPROM_ADDR_VCAL 5
+#define EEPROM_ADDR_ICAL 5
 #define DEFAULT_ICAL 0.170732
 #define EEPROM_ADDR_PHASECAL 9
 #define DEFAULT_PHASECAL 2.3
@@ -31,7 +31,9 @@ ZBRxResponse rx = ZBRxResponse();
 EnergyMonitor emon;  //Create an instance
 
 int sendEach;
-float VCAL, float ICAL, float PHASECAL;
+float VCAL;
+float ICAL;
+float PHASECAL;
 
 void setup() {
   xbee.begin(38400);
