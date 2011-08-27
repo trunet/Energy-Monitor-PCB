@@ -35,6 +35,8 @@ float VCAL;
 float ICAL;
 float PHASECAL;
 
+unsigned long lastPacket;
+
 void setup() {
   xbee.begin(38400);
 
@@ -58,9 +60,7 @@ void setup() {
     emon.calibration(VCAL, ICAL, PHASECAL);
   }
 
-  //emon.calibration( 1.116111611, 0.128401361, 2.3);  //Energy monitor calibration
-  //emon.calibration( 1, 1, 1);
-
+  lastPacket = millis();
 }
 
 void loop()
@@ -79,6 +79,12 @@ void loop()
         type = rx.getData(0);
         switch (type) {
           case 0x01:
+#ifdef _DEBUG_
+            Serial.println();
+            Serial.print("Received Set VCAL packet with ");
+            Serial.print(rx.getDataLength(), DEC);
+            Serial.println(" bytes");
+#endif
             if (rx.getDataLength() == 5) {
               float value = 0.0;
               byte* p = (byte*)(void*)&value;
@@ -86,9 +92,21 @@ void loop()
                 *p++ = rx.getData(i);
               EEPROM_writeFloat(EEPROM_ADDR_VCAL, value);
               recalibrateFromEEPROM();
+            } else {
+              clearPayload();
+              payload[0] = 0x01;
+              payloadPointer++;
+              addToPayload(EEPROM_readFloat(EEPROM_ADDR_VCAL));
+              xbee.send(zbTx);
             }
             break;
           case 0x02:
+#ifdef _DEBUG_
+            Serial.println();
+            Serial.print("Received Set ICAL packet with ");
+            Serial.print(rx.getDataLength(), DEC);
+            Serial.println(" bytes");
+#endif
             if (rx.getDataLength() == 5) {
               float value = 0.0;
               byte* p = (byte*)(void*)&value;
@@ -96,9 +114,21 @@ void loop()
                 *p++ = rx.getData(i);
               EEPROM_writeFloat(EEPROM_ADDR_ICAL, value);
               recalibrateFromEEPROM();
+            } else {
+              clearPayload();
+              payload[0] = 0x02;
+              payloadPointer++;
+              addToPayload(EEPROM_readFloat(EEPROM_ADDR_ICAL));
+              xbee.send(zbTx);
             }
             break;
           case 0x03:
+#ifdef _DEBUG_
+            Serial.println();
+            Serial.print("Received Set PHASECAL packet with ");
+            Serial.print(rx.getDataLength(), DEC);
+            Serial.println(" bytes");
+#endif
             if (rx.getDataLength() == 5) {
               float value = 0.0;
               byte* p = (byte*)(void*)&value;
@@ -106,15 +136,38 @@ void loop()
                 *p++ = rx.getData(i);
               EEPROM_writeFloat(EEPROM_ADDR_PHASECAL, value);
               recalibrateFromEEPROM();
+            } else {
+              clearPayload();
+              payload[0] = 0x03;
+              payloadPointer++;
+              addToPayload(EEPROM_readFloat(EEPROM_ADDR_PHASECAL));
+              xbee.send(zbTx);
             }
             break;
           case 0x04:
+#ifdef _DEBUG_
+            Serial.println();
+            Serial.print("Received Set DELAY packet with ");
+            Serial.print(rx.getDataLength(), DEC);
+            Serial.println(" bytes");
+#endif
             if (rx.getDataLength() == 3) {
-              int value = 0.0;
+              int value = 0;
               byte* p = (byte*)(void*)&value;
               for (int i = 1; i <= sizeof(value); i++)
                 *p++ = rx.getData(i);
               EEPROM_writeInt(EEPROM_ADDR_SEND_EACH, value);
+              sendEach = EEPROM_readInt(EEPROM_ADDR_SEND_EACH);
+            } else {
+              clearPayload();
+              payload[0] = 0x04;
+              payloadPointer++;
+              int value;
+              value = EEPROM_readInt(EEPROM_ADDR_SEND_EACH);
+              byte * b = (byte *) &value;
+              payload[payloadPointer++] = b[0];
+              payload[payloadPointer++] = b[1];
+              xbee.send(zbTx);
             }
             break;
         }
@@ -122,51 +175,29 @@ void loop()
     }
   }
 
-  emon.calc(20,2000);
-  payloadPointer = 0;
+  if ((millis() - lastPacket) > sendEach) {
+    lastPacket = millis();
+    emon.calc(20,2000);
+    clearPayload();
 #ifdef _DEBUG_
-  Serial.println();
-  Serial.print(emon.realPower);
-  Serial.print(' ');
-  Serial.print(emon.apparentPower);
-  Serial.print(' ');
-  Serial.print(emon.powerFactor);
-  Serial.print(' ');
-  Serial.print(emon.Vrms);
-  Serial.print(' ');
-  Serial.println(emon.Irms);
+    Serial.println();
+    Serial.print(emon.realPower);
+    Serial.print(' ');
+    Serial.print(emon.apparentPower);
+    Serial.print(' ');
+    Serial.print(emon.powerFactor);
+    Serial.print(' ');
+    Serial.print(emon.Vrms);
+    Serial.print(' ');
+    Serial.println(emon.Irms);
 #endif
-  addToPayload(emon.realPower);
-  addToPayload(emon.apparentPower);
-  addToPayload(emon.powerFactor);
-  addToPayload(emon.Vrms);
-  addToPayload(emon.Irms);
-  xbee.send(zbTx);
-
-  /*
-  if (xbee.readPacket(500)) {
-        // got a response!
-
-        // should be a znet tx status            	
-    	if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
-    	   xbee.getResponse().getZBTxStatusResponse(txStatus);
-    		
-    	   // get the delivery status, the fifth byte
-           if (txStatus.getDeliveryStatus() == SUCCESS) {
-            	// success.  time to celebrate
-             	//flashLed(statusLed, 5, 50);
-           } else {
-            	// the remote XBee did not receive our packet. is it powered on?
-             	//flashLed(errorLed, 3, 500);
-           }
-        }      
-    } else {
-      // local XBee did not provide a timely TX Status Response -- should not happen
-      //flashLed(errorLed, 2, 50);
-    }
-    */
-  
-  delay(sendEach);
+    addToPayload(emon.realPower);
+    addToPayload(emon.apparentPower);
+    addToPayload(emon.powerFactor);
+    addToPayload(emon.Vrms);
+    addToPayload(emon.Irms);
+    xbee.send(zbTx);
+  }
 }
 
 void addToPayload(float f) {
@@ -175,6 +206,13 @@ void addToPayload(float f) {
   payload[payloadPointer++] = b[1];
   payload[payloadPointer++] = b[2];
   payload[payloadPointer++] = b[3];
+}
+
+void clearPayload() {
+  for (byte i=0; i<sizeof(payload); i++) {
+    payload[i] = '\0';
+  }
+  payloadPointer = 0;
 }
 
 void EEPROM_writeFloat(int ee, float value) {
