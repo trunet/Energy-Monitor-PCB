@@ -27,28 +27,28 @@ ical = 0.170732
 phasecal = 2.3
 delay = 10000 # in milliseconds(10000 = 10 seconds)
 
-# VCAL in 8-bits chuncks
+# VCAL in 8-bits chunks
 vcal = unpack('<L', pack('<f', vcal))[0]
 v1 = vcal & 0xff
 v2 = (vcal >> 8) & 0xff
 v3 = (vcal >> 16) & 0xff
 v4 = (vcal >> 24) & 0xff
 
-# ICAL in 8-bits chuncks
+# ICAL in 8-bits chunks
 ical = unpack('<L', pack('<f', ical))[0]
 i1 = ical & 0xff
 i2 = (ical >> 8) & 0xff
 i3 = (ical >> 16) & 0xff
 i4 = (ical >> 24) & 0xff
 
-# PHASECAL in 8-bits chuncks
+# PHASECAL in 8-bits chunks
 phasecal = unpack('<L', pack('<f', phasecal))[0]
 p1 = phasecal & 0xff
 p2 = (phasecal >> 8) & 0xff
 p3 = (phasecal >> 16) & 0xff
 p4 = (phasecal >> 24) & 0xff
 
-# DELAY in 8-bits chuncks
+# DELAY in 8-bits chunks
 d1 = delay & 0xff
 d2 = delay >> 8
 
